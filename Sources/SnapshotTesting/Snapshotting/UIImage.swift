@@ -24,19 +24,27 @@ extension Diffing where Value == UIImage {
     return Diffing(
       toData: { $0.pngData() ?? emptyImage().pngData()! },
       fromData: { UIImage(data: $0, scale: imageScale)! }
-    ) { old, new in
+    ) { old, new -> (String, [SnapshotArtifact])? in
       guard let message = compare(old, new, precision: precision, perceptualPrecision: perceptualPrecision) else { return nil }
       let difference = SnapshotTesting.diff(old, new)
-      let oldAttachment = XCTAttachment(image: old)
-      oldAttachment.name = "reference"
-      let isEmptyImage = new.size == .zero
-      let newAttachment = XCTAttachment(image: isEmptyImage ? emptyImage() : new)
-      newAttachment.name = "failure"
-      let differenceAttachment = XCTAttachment(image: difference)
-      differenceAttachment.name = "difference"
+      let oldArtifact = SnapshotArtifact(
+        data: old.pngData()!,
+        artifactType: .reference,
+        uniformTypeIdentifier: "public.png"
+      )
+      let newArtifact = SnapshotArtifact(
+        data: new.pngData()!,
+        artifactType: .failure,
+        uniformTypeIdentifier: "public.png"
+      )
+      let differenceArtifact = SnapshotArtifact(
+        data: difference.pngData()!,
+        artifactType: .difference,
+        uniformTypeIdentifier: "public.png"
+      )
       return (
         message,
-        [oldAttachment, newAttachment, differenceAttachment]
+        [oldArtifact, newArtifact, differenceArtifact]
       )
     }
   }

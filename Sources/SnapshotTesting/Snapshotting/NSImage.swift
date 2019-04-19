@@ -16,18 +16,27 @@ extension Diffing where Value == NSImage {
     return .init(
       toData: { NSImagePNGRepresentation($0)! },
       fromData: { NSImage(data: $0)! }
-    ) { old, new in
+    ) { old, new -> (String, [SnapshotArtifact])? in
       guard let message = compare(old, new, precision: precision, perceptualPrecision: perceptualPrecision) else { return nil }
       let difference = SnapshotTesting.diff(old, new)
-      let oldAttachment = XCTAttachment(image: old)
-      oldAttachment.name = "reference"
-      let newAttachment = XCTAttachment(image: new)
-      newAttachment.name = "failure"
-      let differenceAttachment = XCTAttachment(image: difference)
-      differenceAttachment.name = "difference"
+      let oldArtifact = SnapshotArtifact(
+        data: NSImagePNGRepresentation(old)!,
+        artifactType: .reference,
+        uniformTypeIdentifier: "public.png"
+      )
+      let newArtifact = SnapshotArtifact(
+        data: NSImagePNGRepresentation(new)!,
+        artifactType: .failure,
+        uniformTypeIdentifier: "public.png"
+      )
+      let differenceArtifact = SnapshotArtifact(
+        data: NSImagePNGRepresentation(difference)!,
+        artifactType: .difference,
+        uniformTypeIdentifier: "public.png"
+      )
       return (
         message,
-        [oldAttachment, newAttachment, differenceAttachment]
+        [oldArtifact, newArtifact, differenceArtifact]
       )
     }
   }

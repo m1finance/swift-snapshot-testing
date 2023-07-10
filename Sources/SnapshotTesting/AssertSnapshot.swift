@@ -234,8 +234,13 @@ public func verifySnapshot<Value, Format>(
         return "Couldn't snapshot value"
       }
 
+      let artifactsUrl = URL(
+        fileURLWithPath: ProcessInfo.processInfo.environment["SNAPSHOT_ARTIFACTS"] ?? NSTemporaryDirectory(), isDirectory: true
+      )
+
       guard !recording, fileManager.fileExists(atPath: snapshotFileUrl.path) else {
-        try snapshotting.diffing.toData(diffable).write(to: snapshotFileUrl)
+        let snapshotData = snapshotting.diffing.toData(diffable)
+        try snapshotData.write(to: snapshotFileUrl)
         #if !os(Linux) && !os(Windows)
         if ProcessInfo.processInfo.environment.keys.contains("__XCODE_BUILT_PRODUCTS_DIR_PATHS") {
           XCTContext.runActivity(named: "Attached Recorded Snapshot") { activity in
@@ -244,6 +249,11 @@ public func verifySnapshot<Value, Format>(
           }
         }
         #endif
+
+        let artifactsSubUrl = artifactsUrl.appendingPathComponent(fileName)
+        let writeArtifactUrl = artifactsSubUrl.appendingPathComponent(snapshotFileUrl.lastPathComponent)
+        try fileManager.createDirectory(at: writeArtifactUrl, withIntermediateDirectories: true)
+        try snapshotData.write(to: writeArtifactUrl)
 
         return recording
           ? """
@@ -281,10 +291,6 @@ public func verifySnapshot<Value, Format>(
       guard artifactDiff != nil || attachmentDiff != nil else {
         return nil
       }
-
-      let artifactsUrl = URL(
-        fileURLWithPath: ProcessInfo.processInfo.environment["SNAPSHOT_ARTIFACTS"] ?? NSTemporaryDirectory(), isDirectory: true
-      )
 
       var failedSnapshotFileUrl: URL!
       var failureMessage: String!

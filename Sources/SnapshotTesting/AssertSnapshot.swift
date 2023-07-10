@@ -250,9 +250,9 @@ public func verifySnapshot<Value, Format>(
         }
         #endif
 
-        let artifactsSubUrl = artifactsUrl.appendingPathComponent(fileName)
+        let artifactsSubUrl = artifactsUrl.appendingPathComponent(fileName).appendingPathComponent(snapshotFileUrl.lastPathComponent).deletingPathExtension()
         let writeArtifactUrl = artifactsSubUrl.appendingPathComponent(snapshotFileUrl.lastPathComponent)
-        try fileManager.createDirectory(at: writeArtifactUrl, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: artifactsSubUrl, withIntermediateDirectories: true)
         try snapshotData.write(to: writeArtifactUrl)
 
         return recording

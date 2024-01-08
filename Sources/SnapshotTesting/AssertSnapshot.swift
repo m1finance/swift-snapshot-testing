@@ -327,14 +327,13 @@ public func verifySnapshot<Value, Format>(
             SnapshotTesting.diffTool = "ksdiff"
         """
 
-      if let name = name {
-        failureMessage = "Snapshot \"\(name)\" does not match reference."
-      } else {
+
+      if failureMessage == nil {
         failureMessage = "Snapshot does not match reference."
       }
 
       return """
-      \(failureMessage)
+      \(failureMessage!)
 
       \(diffMessage)
 

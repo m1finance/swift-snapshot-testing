@@ -417,9 +417,8 @@ public func verifySnapshot<Value, Format>(
       try fileManager.createDirectory(at: artifactsSubUrl, withIntermediateDirectories: true)
       func artifactFileURL(for artifactType: ArtifactType) -> String {
         let baseFileName = "\(testName).\(identifier)"
-        let artifactFileName = "\(baseFileName)\(artifactType.suffix)"
-        let result = URL(fileURLWithPath: artifactFileName, isDirectory: false)
-        return result.appendingPathExtension(snapshotting.pathExtension ?? "").path
+        let artifactFileName = "\(baseFileName)\(artifactType.suffix).\(snapshotting.pathExtension ?? "")"
+        return artifactFileName
       }
 
       let failedSnapshotFileUrl = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .failure))

@@ -417,9 +417,12 @@ public func verifySnapshot<Value, Format>(
       try fileManager.createDirectory(at: artifactsSubUrl, withIntermediateDirectories: true)
       func artifactFileURL(for artifactType: ArtifactType) -> String {
         let baseFileName = "\(testName).\(identifier)"
-        let artifactFileName = "\(baseFileName)\(artifactType.suffix).\(snapshotting.pathExtension ?? "")"
+        let artifactFileName = "\(testName)/\(baseFileName)\(artifactType.suffix).\(snapshotting.pathExtension ?? "")"
         return artifactFileName
       }
+
+      let testFileUrl = artifactsSubUrl.appendingPathComponent(testName)
+      try fileManager.createDirectory(at: testFileUrl, withIntermediateDirectories: true)
 
       let failedSnapshotFileUrl = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .failure))
       try snapshotting.diffing.toData(diffable).write(to: failedSnapshotFileUrl)

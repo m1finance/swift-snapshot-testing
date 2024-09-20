@@ -12,7 +12,7 @@ public struct Diffing<Value> {
   /// Compares two values. If the values do not match, returns a failure message and artifacts
   /// describing the failure.
   public typealias DiffingResult = (String, [XCTAttachment], Value?)
-  public var diff: (Value, Value) -> DiffingResult?
+  public var diff: ((Value, Value) -> DiffingResult?)
 
   /// Creates a new `Diffing` on `Value`.
   ///
@@ -23,7 +23,7 @@ public struct Diffing<Value> {
   public init(
     toData: @escaping (_ value: Value) -> Data,
     fromData: @escaping (_ data: Data) -> Value,
-    diff: @escaping (_ lhs: Value, _ rhs: Value) -> DiffingResult?
+    diff: @escaping ((_ lhs: Value, _ rhs: Value) -> DiffingResult?)
   ) {
     self.toData = toData
     self.fromData = fromData

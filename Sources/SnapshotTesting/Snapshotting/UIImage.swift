@@ -34,7 +34,7 @@
         guard
           let message = compare(
             old, new, precision: precision, perceptualPrecision: perceptualPrecision)
-        else { return ("", [], nil) }
+        else { return nil }
         let difference = SnapshotTesting.diff(old, new)
         let oldAttachment = XCTAttachment(image: old)
         oldAttachment.name = "reference"

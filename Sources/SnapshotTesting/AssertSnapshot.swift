@@ -368,6 +368,16 @@ public func verifySnapshot<Value, Format>(
         #endif
       }
 
+      guard let (failedSnapshotFileUrl, failure) = try createAndAttachAttachments(
+        snapshotFileUrl: snapshotFileUrl,
+        snapshotting: snapshotting,
+        diffable: &diffable,
+        fileName: fileName,
+        identifier: identifier,
+        fileManager: fileManager,
+        testName: testName
+      ) else { return nil }
+
       guard
         record != .all,
         (record != .missing && record != .failed)
@@ -390,60 +400,6 @@ public func verifySnapshot<Value, Format>(
 
           Re-run "\(testName)" to assert against the newly-recorded snapshot.
           """
-      }
-
-      let data = try Data(contentsOf: snapshotFileUrl)
-      let reference = snapshotting.diffing.fromData(data)
-
-      #if os(iOS) || os(tvOS)
-        // If the image generation fails for the diffable part and the reference was empty, use the reference
-        if let localDiff = diffable as? UIImage,
-          let refImage = reference as? UIImage,
-          localDiff.size == .zero && refImage.size == .zero
-        {
-          diffable = reference
-        }
-      #endif
-
-      guard let (failure, attachments, diffValue) = snapshotting.diffing.diff(reference, diffable) else {
-        return nil
-      }
-
-      let artifactsUrl = URL(
-        fileURLWithPath: ProcessInfo.processInfo.environment["SNAPSHOT_ARTIFACTS"]
-          ?? NSTemporaryDirectory(), isDirectory: true
-      )
-      let artifactsSubUrl = artifactsUrl.appendingPathComponent(fileName)
-      try fileManager.createDirectory(at: artifactsSubUrl, withIntermediateDirectories: true)
-      func artifactFileURL(for artifactType: ArtifactType) -> String {
-        let baseFileName = "\(testName).\(identifier)"
-        let artifactFileName = "\(testName)/\(baseFileName)\(artifactType.suffix).\(snapshotting.pathExtension ?? "")"
-        return artifactFileName
-      }
-
-      let testFileUrl = artifactsSubUrl.appendingPathComponent(testName)
-      try fileManager.createDirectory(at: testFileUrl, withIntermediateDirectories: true)
-
-      let failedSnapshotFileUrl = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .failure))
-      try snapshotting.diffing.toData(diffable).write(to: failedSnapshotFileUrl)
-      let referenceSnapshotFileURL = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .reference))
-      try snapshotting.diffing.toData(reference).write(to: referenceSnapshotFileURL)
-
-      if let diffValue {
-        let diffFileURL = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .diff))
-        try snapshotting.diffing.toData(diffValue).write(to: diffFileURL)
-      }
-
-      if !attachments.isEmpty {
-        #if !os(Linux) && !os(Windows)
-          if ProcessInfo.processInfo.environment.keys.contains("__XCODE_BUILT_PRODUCTS_DIR_PATHS") {
-            XCTContext.runActivity(named: "Attached Failure Diff") { activity in
-              attachments.forEach {
-                activity.add($0)
-              }
-            }
-          }
-        #endif
       }
 
       let diffMessage = (SnapshotTestingConfiguration.current?.diffTool ?? _diffTool)(
@@ -474,6 +430,72 @@ public func verifySnapshot<Value, Format>(
       return error.localizedDescription
     }
   }
+}
+
+private func createAndAttachAttachments<Value, Format>(
+  snapshotFileUrl: URL,
+  snapshotting:  Snapshotting<Value, Format>,
+  diffable: inout Format,
+  fileName: String,
+  identifier: String,
+  fileManager: FileManager,
+  testName: String
+) throws -> (failedSnapshotFileUrl: URL, failure: String)? {
+  let data = try Data(contentsOf: snapshotFileUrl)
+  let reference = snapshotting.diffing.fromData(data)
+
+  #if os(iOS) || os(tvOS)
+    // If the image generation fails for the diffable part and the reference was empty, use the reference
+    if let localDiff = diffable as? UIImage,
+      let refImage = reference as? UIImage,
+      localDiff.size == .zero && refImage.size == .zero
+    {
+      diffable = reference
+    }
+  #endif
+
+  guard let (failure, attachments, diffValue) = snapshotting.diffing.diff(reference, diffable) else {
+    return nil
+  }
+
+  let artifactsUrl = URL(
+    fileURLWithPath: ProcessInfo.processInfo.environment["SNAPSHOT_ARTIFACTS"]
+      ?? NSTemporaryDirectory(), isDirectory: true
+  )
+  let artifactsSubUrl = artifactsUrl.appendingPathComponent(fileName)
+  try fileManager.createDirectory(at: artifactsSubUrl, withIntermediateDirectories: true)
+  func artifactFileURL(for artifactType: ArtifactType) -> String {
+    let baseFileName = "\(testName).\(identifier)"
+    let artifactFileName = "\(testName)/\(baseFileName)\(artifactType.suffix).\(snapshotting.pathExtension ?? "")"
+    return artifactFileName
+  }
+
+  let testFileUrl = artifactsSubUrl.appendingPathComponent(testName)
+  try fileManager.createDirectory(at: testFileUrl, withIntermediateDirectories: true)
+
+  let failedSnapshotFileUrl = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .failure))
+  try snapshotting.diffing.toData(diffable).write(to: failedSnapshotFileUrl)
+  let referenceSnapshotFileURL = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .reference))
+  try snapshotting.diffing.toData(reference).write(to: referenceSnapshotFileURL)
+
+  if let diffValue {
+    let diffFileURL = artifactsSubUrl.appendingPathComponent(artifactFileURL(for: .diff))
+    try snapshotting.diffing.toData(diffValue).write(to: diffFileURL)
+  }
+
+  if !attachments.isEmpty {
+    #if !os(Linux) && !os(Windows)
+      if ProcessInfo.processInfo.environment.keys.contains("__XCODE_BUILT_PRODUCTS_DIR_PATHS") {
+        XCTContext.runActivity(named: "Attached Failure Diff") { activity in
+          attachments.forEach {
+            activity.add($0)
+          }
+        }
+      }
+    #endif
+  }
+
+  return (failedSnapshotFileUrl: failedSnapshotFileUrl, failure: failure)
 }
 
 // MARK: - Private

@@ -115,8 +115,17 @@
     guard let oldData = context(for: oldCgImage, data: &oldBytes)?.data else {
       return "Reference image's data could not be loaded."
     }
+    let record = SnapshotTestingConfiguration.current?.record
     if let newContext = context(for: newCgImage), let newData = newContext.data {
-      if memcmp(oldData, newData, byteCount) == 0 { return nil }
+      if memcmp(oldData, newData, byteCount) == 0 {
+        // We want to generate artifacts on CI, so if we're `record: true` in the tests,
+        // always force a non-nil response here to force CI to record and generate output.
+        if record == .all {
+          return "Newly-taken snapshot matches reference."
+        } else {
+          return nil
+        }
+      }
     }
     var newerBytes = [UInt8](repeating: 0, count: byteCount)
     guard
